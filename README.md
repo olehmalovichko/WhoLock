@@ -1,17 +1,17 @@
 # WhoLock
 ---
-Show who locked the file.
-The utility shows who locked the file.
-Tested on Windows Server 2022 Standard
-Work only with administrator rights.
+Show who locked the file.<br>
+The utility shows who locked the file.<br>
+Tested on Windows Server 2022 Standard<br>
+Work only with administrator rights.<br>
 ---
-Important
-Before using — run the utility .\Sysinternals\handle.exe once.  
-Edit the path to the utility in the .\RegMenu\menu_all.reg file.
-Run menu_all.reg — this adds the utility to the right-click context menu (File Explorer).
-Or
-1. Run lockedfile.cmd  
-2. Select the locked file  
+Important<br>
+Before using — run the utility .\Sysinternals\handle.exe once.<br>
+Edit the path to the utility in the .\RegMenu\menu_all.reg file.<br>
+Run menu_all.reg — this adds the utility to the right-click context menu (File Explorer).<br>
+Or<br>
+1. Run lockedfile.cmd  <br>
+2. Select the locked file  <br>
 ---
 
 ![app image](Screenshots/wholock.jpg)
@@ -36,13 +36,12 @@ Ukraine
 WhoLock
 Вивести хто заблокував файл.
 
-Важливо:
+Важливо
 Перед використанням запустіть утиліту .\Sysinternals\handle.exe один раз.
 Відредагуйте шлях до утиліти у файлі .\RegMenu\menu_all.reg.
 Запустіть menu_all.reg — це додасть утиліту до контекстного меню, яке викликається  правою кнопкою миші на файлі (File Explorer).
-1. Запустити lockedfile.cmd 
-2. Вибрати заблокований файл файл 
-
+1. Запустити lockedfile.cmd
+2. Вибрати заблокований файл файл
 
 Приклад іншої утіліти з командної строки:
 Подивитися, хто відкрив файл
