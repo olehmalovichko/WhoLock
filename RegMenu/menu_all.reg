@@ -1,0 +1,10 @@
+Windows Registry Editor Version 5.00
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Classes\*\shell\RunMyScript]
+@="Run WhoLock"
+"Icon"="cmd.exe"
+
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Classes\*\shell\RunMyScript\command]
+@="\"D:\\ARHIV\\ASUP04SHADOW\\wholock.cmd\" \"%1\""
+
