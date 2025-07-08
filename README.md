@@ -1,11 +1,11 @@
 # WhoLock
-============================
+---
 WhoLock
 Show who locked the file.
 The utility shows who locked the file.
 Tested on Windows Server 2022 Standard
 Work only with administrator rights.
-
+---
 Important
 Before using — run the utility .\Sysinternals\handle.exe once.  
 Edit the path to the utility in the .\RegMenu\menu_all.reg file.
@@ -13,6 +13,7 @@ Run menu_all.reg — this adds the utility to the right-click context menu (File
 Or
 1. Run lockedfile.cmd  
 2. Select the locked file  
+---
 
 ![app image](Screenshots/wholock.jpg)
 <br>
