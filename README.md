@@ -7,7 +7,7 @@ Work only with administrator rights.<br>
 ---
 Important<br>
 Before using — run the utility .\Sysinternals\handle.exe once.<br>
-Edit the path to the utility in the .\RegMenu\menu_all.reg file.<br>
+Edit the path to the file wholock.exe in the .\RegMenu\menu_all.reg file.<br>
 Run menu_all.reg — this adds the utility to the right-click context menu (File Explorer).<br>
 Or<br>
 1. Run lockedfile.cmd  <br>
@@ -18,6 +18,10 @@ Or<br>
 <br>
 ![app image](Screenshots/wholockResult.jpg)
 <br>
+
+Create EXE file from PS1
+ps2exe .\wholock.ps1 .\wholock.exe -noConsole -sta -winform -noOutput
+
 
 Or another example of a command line utility:
 See who opened a file:
