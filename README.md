@@ -34,7 +34,8 @@ WhoLock<br>
 1. Запустити wholock.exe<br>
 2. Вибрати заблокований файл файл<br>
 
-Створити EXE file з PS1
+Create EXE file from PS1<br>
 ps2exe .\wholock.ps1 .\wholock.exe -noConsole -sta -winform -noOutput
+
 ---
 Oleh Malovichko
