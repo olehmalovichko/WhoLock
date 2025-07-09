@@ -16,8 +16,6 @@ Or<br>
 
 ![app image](Screenshots/wholock.jpg)
 <br>
-![app image](Screenshots/wholockResult.jpg)
-<br>
 
 Create EXE file from PS1
 ps2exe .\wholock.ps1 .\wholock.exe -noConsole -sta -winform -noOutput
