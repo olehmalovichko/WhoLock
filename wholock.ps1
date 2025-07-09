@@ -1,135 +1,213 @@
-<#
+Ôªø# WhoLock GUI Tool with Admin Elevation (EXE-Compatible)
+# MIT License | Ukraine 2025 | Oleh Malovichko
 
-.SYNOPSIS
-    Prompts for a file path, then shows which users have that file open (using Sysinternals handle.exe).
+Add-Type -AssemblyName System.Windows.Forms
+Add-Type -AssemblyName System.Drawing
 
-.DESCRIPTION
-    1. Ensures script is running as administrator (re-launches itself elevated if needed).
-    2. Asks the user to enter the full path to the file.
-    3. Runs handle.exe (embedded or installed in C:\Sysinternals) to find open handles.
-    4. Parses out each PID, then uses CIM to get the process owner.
-    5. Prints a list of ìPID ñ User ñ ProcessNameî entries.
+# ==== Detect handle.exe path relative to script/exe ====
+$scriptDir = Split-Path -Parent ([System.Diagnostics.Process]::GetCurrentProcess().MainModule.FileName)
+$handleExe = Join-Path $scriptDir "Sysinternals\handle.exe"
 
-.NOTES
-    ï You must have handle.exe from Sysinternals in C:\Sysinternals\handle.exe
-    ï ExecutionPolicy should allow running scripts (you can bypass with ñExecutionPolicy Bypass).
-#>
-
-param (
-    [string]$filePath
-)
-
-Write-Host "=================================================="
-Write-Host "WhoLock"
-Write-Host "The utility shows who locked the file."
-Write-Host "2025 Oleh Malovichko"
-Write-Host "=================================================="
-
-if (-not $filePath) {
-    Write-Host "No file path was provided as a parameter."
-    Write-Host "Usage: lockedfile.ps1 -FilePath 'C:\Path\To\File.txt'"
- ##   exit 1
+# ==== Read argument even inside compiled .exe ====
+$global:filePath = $null
+try {
+    $cmdLine = [Environment]::GetCommandLineArgs()
+    if ($cmdLine.Count -gt 1) {
+        $global:filePath = $cmdLine[1]
+    }
+} catch {
+    $global:filePath = $null
 }
 
-#if (-not (Test-Path -Path $FilePath -PathType Leaf)) {
-#    Write-Host " File to check: $FilePath"
-###    exit 1
-#}
+# ==== Ensure script is running as administrator ====
+function Ensure-Admin {
+    $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
+    $principal = New-Object Security.Principal.WindowsPrincipal($identity)
+    $admin = [Security.Principal.WindowsBuiltInRole]::Administrator
 
-Write-Host "File exists: $FilePath"
+    if (-not $principal.IsInRole($admin)) {
+        $exePath = [System.Diagnostics.Process]::GetCurrentProcess().MainModule.FileName
 
+        # Pass argument back after elevation
+        $argLine = ""
+        if ($global:filePath) {
+            $argLine = "`"$global:filePath`""
+        }
 
+        $psi = New-Object System.Diagnostics.ProcessStartInfo
+        $psi.FileName = $exePath
+        $psi.Verb = "runas"
+        $psi.Arguments = $argLine
+        $psi.UseShellExecute = $true
 
-# óóóóóóóóóóóóóóóóóóóóóóóóóóóóóóóóóóóóóó
-# 1) Self-elevation to Administrator
-# óóóóóóóóóóóóóóóóóóóóóóóóóóóóóóóóóóóóóó
-if (-not ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()
-    ).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
-    Write-Host "Re-launching script as Administrator..."
-    Start-Process -FilePath PowerShell.exe `
-                  -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`"" `
-                  -Verb RunAs
-    exit
-}
-
-# óóóóóóóóóóóóóóóóóóóóóóóóóóóóóóóóóóóóóó
-# 2) Prompt for file path
-# óóóóóóóóóóóóóóóóóóóóóóóóóóóóóóóóóóóóóó
-#####$filePath = Read-Host "Enter the full path to the file you want to check"
-
-
-if (-not $filePath) {
- Write-Host "`nSelect the file you want to check...:`n"
-
- Add-Type -AssemblyName System.Windows.Forms
-
- $dialog = New-Object System.Windows.Forms.OpenFileDialog
- $dialog.Title = "Select a file to check"
- $dialog.Filter = "All files (*.*)|*.*"
-
- if ($dialog.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) {
-    $filePath = $dialog.FileName
-     Write-Host "`nCheck: $filePath`n"
- } else {
-    Write-Host "No file selected. Exiting."
-    exit
- }
-
-}
-
- 
-
-# óóóóóóóóóóóóóóóóóóóóóóóóóóóóóóóóóóóóóó
-# 3) Verify handle.exe location
-# óóóóóóóóóóóóóóóóóóóóóóóóóóóóóóóóóóóóóó
-$handleExe = "D:\ARHIV\ASUP04SHADOW\Sysinternals\handle.exe"
-if (-not (Test-Path $handleExe)) {
-    Write-Error "handle.exe not found at path: $handleExe"
-    Write-Error "Download it from https://learn.microsoft.com/en-us/sysinternals/downloads/handle and place it in C:\Sysinternals"
-    exit 1
-}
-
-# óóóóóóóóóóóóóóóóóóóóóóóóóóóóóóóóóóóóóó
-# 4) Check the file itself
-# óóóóóóóóóóóóóóóóóóóóóóóóóóóóóóóóóóóóóó
-if (-not (Test-Path $filePath)) {
-    Write-Error "File not found: $filePath"
-    exit 1
-}
-
-# óóóóóóóóóóóóóóóóóóóóóóóóóóóóóóóóóóóóóó
-# 5) Run handle.exe and capture output
-# óóóóóóóóóóóóóóóóóóóóóóóóóóóóóóóóóóóóóó
-$raw = & $handleExe $filePath 2>$null
-
-if ([string]::IsNullOrWhiteSpace($raw)) {
-    Write-Host "No one is holding the file open."
-    exit 0
-}
-
-Write-Host "`nOpen handles found:`n"
-
-# óóóóóóóóóóóóóóóóóóóóóóóóóóóóóóóóóóóóóó
-# 6) Parse each PID, lookup owner & process name
-# óóóóóóóóóóóóóóóóóóóóóóóóóóóóóóóóóóóóóó
-$raw | ForEach-Object {
-    if ($_ -match 'pid:\s*(\d+)') {
-        $processId = $matches[1]
-
-        # Get the CIM instance for the process
-        $proc = Get-CimInstance Win32_Process -Filter "ProcessId = $processId"
-
-        # Invoke the GetOwner method
-        $ownerInfo = Invoke-CimMethod -InputObject $proc -MethodName GetOwner
-        $userName  = "$($ownerInfo.Domain)\$($ownerInfo.User)"
-
-        # Output
-        Write-Host ("PID: {0,-6} User: {1,-20} Process: {2}" -f `
-            $processId, $userName, $proc.Name)
+        try {
+            [System.Diagnostics.Process]::Start($psi) | Out-Null
+        } catch {
+            [System.Windows.Forms.MessageBox]::Show("This tool requires administrator privileges.", "Access Denied", "OK", "Error")
+        }
+        exit
     }
 }
 
+# ==== Show GUI with lock information ====
+function Show-ResultWindow {
+    param ([string]$FilePath)
 
-Write-Host "`nDone."
-Write-Host "Press any key to exit..."
-[System.Console]::ReadKey($true) | Out-Null
+    function Get-FileLocks {
+        $raw = & $handleExe $FilePath 2>$null
+        $results = @()
+
+        $raw | ForEach-Object {
+            if ($_ -match 'pid:\s*(\d+)') {
+                $procId = $matches[1]
+                $proc = Get-CimInstance Win32_Process -Filter "ProcessId = $procId" -ErrorAction SilentlyContinue
+                if ($proc) {
+                    $owner = Invoke-CimMethod -InputObject $proc -MethodName GetOwner
+                    $user = "$($owner.Domain)\\$($owner.User)"
+                    $results += [PSCustomObject]@{
+                        ProcID  = $procId
+                        User    = $user
+                        Process = $proc.Name
+                    }
+                }
+            }
+        }
+        return $results
+    }
+
+    $form = New-Object Windows.Forms.Form
+    $form.Text = "WhoLock ‚Äì $([System.IO.Path]::GetFileName($FilePath))"
+    $form.Size = New-Object Drawing.Size(650, 450)
+    $form.StartPosition = "CenterScreen"
+    $form.TopMost = $true
+    $form.Icon = [System.Drawing.Icon]::ExtractAssociatedIcon("$env:SystemRoot\\System32\\shell32.dll")
+
+    $listView = New-Object Windows.Forms.ListView
+    $listView.View = 'Details'
+    $listView.FullRowSelect = $true
+    $listView.GridLines = $true
+    $listView.Dock = 'Top'
+    $listView.Height = 350
+    $listView.Columns.Add("ProcID", 80)
+    $listView.Columns.Add("User", 220)
+    $listView.Columns.Add("Process", 300)
+
+    $btnRefresh = New-Object Windows.Forms.Button
+    $btnRefresh.Text = "üîÑ Refresh"
+    $btnRefresh.Width = 100
+    $btnRefresh.Top = 360
+    $btnRefresh.Left = 10
+
+    $btnClose = New-Object Windows.Forms.Button
+    $btnClose.Text = "‚úñ Close"
+    $btnClose.Width = 100
+    $btnClose.Top = 360
+    $btnClose.Left = 120
+    $btnClose.Add_Click({ $form.Close() })
+
+    $form.Controls.AddRange(@($listView, $btnRefresh, $btnClose))
+
+    function Refresh-List {
+        $listView.Items.Clear()
+        $results = Get-FileLocks
+        if ($results.Count -eq 0) {
+            $form.Text = "WhoLock ‚Äì $([System.IO.Path]::GetFileName($FilePath)) [not locked]"
+        } else {
+            foreach ($item in $results) {
+                $lvItem = New-Object Windows.Forms.ListViewItem($item.ProcID)
+                $lvItem.SubItems.Add($item.User)
+                $lvItem.SubItems.Add($item.Process)
+                $listView.Items.Add($lvItem)
+            }
+            $form.Text = "WhoLock ‚Äì $([System.IO.Path]::GetFileName($FilePath)) [$($results.Count) lock(s)]"
+        }
+    }
+
+    $btnRefresh.Add_Click({ Refresh-List })
+
+    $timer = New-Object System.Windows.Forms.Timer
+    $timer.Interval = 60000
+    $timer.Add_Tick({ Refresh-List })
+    $timer.Start()
+
+
+
+
+# –°—Ç–≤–æ—Ä—é—î–º–æ –ø–∞–Ω–µ–ª—å –¥–ª—è –ø—Ä–∞–ø–æ—Ä–∞
+$flagPanel = New-Object System.Windows.Forms.Panel
+$flagPanel.Size = New-Object System.Drawing.Size(15, 2)
+$flagPanel.Dock = "Left"
+$flagPanel.Margin = '5,5,0,0'  # –ª—ñ–≤–∏–π, –≤–µ—Ä—Ö–Ω—ñ–π, –ø—Ä–∞–≤–∏–π, –Ω–∏–∂–Ω—ñ–π
+
+# –ü–æ—Ä–æ–∂–Ω—ñ–π –≤—ñ–¥—Å—Ç—É–ø (3 –ø—ñ–∫—Å–µ–ª—ñ–≤)
+$spacer = New-Object System.Windows.Forms.Panel
+$spacer.Width = 3
+$spacer.Dock = "Left"
+
+# –û–±—Ä–æ–±–Ω–∏–∫ –ø–æ–¥—ñ—ó Paint –¥–ª—è –º–∞–ª—é–≤–∞–Ω–Ω—è –ø—Ä–∞–ø–æ—Ä–∞
+$flagPanel.Add_Paint({
+    param($sender, $e)
+    $g = $e.Graphics
+    $blueBrush = New-Object System.Drawing.SolidBrush([System.Drawing.Color]::RoyalBlue)
+    $yellowBrush = New-Object System.Drawing.SolidBrush([System.Drawing.Color]::Yellow)
+
+    # –ú–∞–ª—é—î–º–æ –≤–µ—Ä—Ö–Ω—é —Å–∏–Ω—é –ø–æ–ª–æ–≤–∏–Ω—É
+    $g.FillRectangle($blueBrush, 0, 4, 15,  7 )
+    # –ú–∞–ª—é—î–º–æ –Ω–∏–∂–Ω—é –∂–æ–≤—Ç—É –ø–æ–ª–æ–≤–∏–Ω—É
+    $g.FillRectangle($yellowBrush, 0, 9, 15, 5 )
+})
+
+# –°—Ç–≤–æ—Ä—é—î–º–æ Label –∑ —Ç–µ–∫—Å—Ç–æ–º
+$copyright = New-Object System.Windows.Forms.Label
+$copyright.Text = "MIT License | Ukraine 2025 | Oleh Malovichko"
+$copyright.AutoSize = $false
+$copyright.Height = 20
+$copyright.Dock = "Fill"
+$copyright.TextAlign = "MiddleLeft"
+$copyright.Font = New-Object System.Drawing.Font("Courier New", 8, [System.Drawing.FontStyle]::Regular)
+$copyright.ForeColor = [System.Drawing.Color]::Gray
+
+# –°—Ç–≤–æ—Ä—é—î–º–æ –∫–æ–Ω—Ç–µ–π–Ω–µ—Ä (Panel) –¥–ª—è –ø—Ä–∞–ø–æ—Ä–∞ —ñ —Ç–µ–∫—Å—Ç—É
+$container = New-Object System.Windows.Forms.Panel
+$container.Dock = "Bottom"
+$container.Height = 20
+
+# –î–æ–¥–∞—î–º–æ –≤ –ø—Ä–∞–≤–∏–ª—å–Ω–æ–º—É –ø–æ—Ä—è–¥–∫—É
+$container.Controls.Add($copyright)
+$container.Controls.Add($flagPanel)
+$container.Controls.Add($spacer)
+
+
+# –î–æ–¥–∞—î–º–æ –∫–æ–Ω—Ç–µ–π–Ω–µ—Ä –¥–æ —Ñ–æ—Ä–º–∏
+$form.Controls.Add($container)
+
+
+    $form.Add_Shown({ Refresh-List })
+    [void]$form.ShowDialog()
+}
+
+# ==== MAIN ENTRY POINT ====
+Ensure-Admin
+
+# If no file was provided ‚Äî ask the user to select one
+if (-not $global:filePath -or -not (Test-Path $global:filePath)) {
+    $dialog = New-Object System.Windows.Forms.OpenFileDialog
+    $dialog.Title = "Select file to check"
+    $dialog.Filter = "All files (*.*)|*.*"
+
+    if ($dialog.ShowDialog() -ne [System.Windows.Forms.DialogResult]::OK) {
+        return
+    }
+
+    $global:filePath = $dialog.FileName
+}
+
+# Check if handle.exe exists
+if (-not (Test-Path $handleExe)) {
+    [System.Windows.Forms.MessageBox]::Show("handle.exe not found at:`n$handleExe", "Error", 'OK', 'Error')
+    exit
+}
+
+# Launch the GUI
+Show-ResultWindow -FilePath $global:filePath
+
