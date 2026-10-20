@@ -63,7 +63,7 @@ function Show-ResultWindow {
                 $proc = Get-CimInstance Win32_Process -Filter "ProcessId = $procId" -ErrorAction SilentlyContinue
                 if ($proc) {
                     $owner = Invoke-CimMethod -InputObject $proc -MethodName GetOwner
-                    $user = "$($owner.Domain)\\$($owner.User)"
+                    $user = "$($owner.Domain)\$($owner.User)"
                     $results += [PSCustomObject]@{
                         ProcID  = $procId
                         User    = $user
@@ -80,7 +80,7 @@ function Show-ResultWindow {
     $form.Size = New-Object Drawing.Size(650, 450)
     $form.StartPosition = "CenterScreen"
     $form.TopMost = $true
-    $form.Icon = [System.Drawing.Icon]::ExtractAssociatedIcon("$env:SystemRoot\\System32\\shell32.dll")
+    $form.Icon = [System.Drawing.Icon]::ExtractAssociatedIcon("$env:SystemRoot\System32\shell32.dll")
 
     $listView = New-Object Windows.Forms.ListView
     $listView.View = 'Details'
